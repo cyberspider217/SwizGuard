@@ -311,6 +311,8 @@ cmd_regen() {
     REALITY_PUBLIC_KEY="$REALITY_PUBLIC_KEY" \
     SERVER_WG_PUBLIC_KEY="$SERVER_WG_PUBLIC_KEY" \
     SHORT_ID="$SHORT_ID" \
+    LAB_DOMAINS="${LAB_DOMAINS:-}" \
+    LAB_DNS="${LAB_DNS:-}" \
     bash "$SCRIPT_DIR/scripts/regen-client-configs.sh"
 
     ok "Configs regenerated for '$name'"

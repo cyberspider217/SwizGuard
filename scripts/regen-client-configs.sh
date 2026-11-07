@@ -8,6 +8,11 @@
 #   CLIENT_NAME, CLIENT_IPV4, CLIENT_IPV6, CLIENT_WG_PRIVKEY, CLIENT_DIR
 #   SERVER_IP, XRAY_PORT, WG_PORT, CLIENT_UUID, CAMOUFLAGE_DEST
 #   REALITY_PUBLIC_KEY, SERVER_WG_PUBLIC_KEY
+#
+# Optional (set in /etc/swizguard/credentials.env), for home-network hostnames
+# that only your own DNS server knows about:
+#   LAB_DOMAINS  space/comma-separated domains, e.g. "home.example lab.example"
+#   LAB_DNS      IPv4 address of the DNS server that answers for them
 
 set -euo pipefail
 
@@ -24,11 +29,37 @@ set -euo pipefail
 : "${REALITY_PUBLIC_KEY:?REALITY_PUBLIC_KEY required}"
 : "${SERVER_WG_PUBLIC_KEY:?SERVER_WG_PUBLIC_KEY required}"
 
+# ─── Xray DNS (split DNS for LAB_DOMAINS, DoH for everything else) ─
+# All DNS that apps send through socks-in is answered by Xray's DNS module;
+# every query it makes goes through the tunnel (dns-internal -> wireguard-out).
+XRAY_DNS_SERVERS='"https://1.1.1.1/dns-query"'
+LAB_DOMAINS="${LAB_DOMAINS:-}"
+LAB_DNS="${LAB_DNS:-}"
+if [ -n "$LAB_DOMAINS" ] || [ -n "$LAB_DNS" ]; then
+    [ -n "$LAB_DOMAINS" ] && [ -n "$LAB_DNS" ] || { echo "LAB_DOMAINS and LAB_DNS must be set together" >&2; exit 1; }
+    [[ "$LAB_DNS" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || { echo "LAB_DNS must be an IPv4 address (got: $LAB_DNS)" >&2; exit 1; }
+    lab_list=""
+    for d in ${LAB_DOMAINS//,/ }; do
+        [[ "$d" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "Invalid domain in LAB_DOMAINS: $d" >&2; exit 1; }
+        lab_list+="${lab_list:+, }\"domain:${d}\""
+    done
+    XRAY_DNS_SERVERS="{ \"address\": \"${LAB_DNS}\", \"domains\": [${lab_list}], \"skipFallback\": true },
+            ${XRAY_DNS_SERVERS}"
+fi
+
 # ─── Xray client config ──────────────────────────────────────────
 cat > "$CLIENT_DIR/xray-client.json" <<XCEOF
 {
     "log": {
         "loglevel": "warning"
+    },
+    "dns": {
+        "tag": "dns-internal",
+        "queryStrategy": "UseIPv4",
+        "servers": [
+            ${XRAY_DNS_SERVERS}
+        ],
+        "disableFallbackIfMatch": true
     },
     "inbounds": [
         {
@@ -108,12 +139,28 @@ cat > "$CLIENT_DIR/xray-client.json" <<XCEOF
             }
         },
         {
+            "tag": "dns-out",
+            "protocol": "dns"
+        },
+        {
             "tag": "direct",
             "protocol": "freedom"
         }
     ],
     "routing": {
         "rules": [
+            {
+                "type": "field",
+                "inboundTag": ["socks-in"],
+                "network": "udp",
+                "port": "53",
+                "outboundTag": "dns-out"
+            },
+            {
+                "type": "field",
+                "inboundTag": ["dns-internal"],
+                "outboundTag": "wireguard-out"
+            },
             {
                 "type": "field",
                 "inboundTag": ["socks-in", "http-in"],
