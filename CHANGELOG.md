@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `regen-client-configs.sh` returning a failure status when `private.key` was absent
 
 ### Changed
+- `xray-client.json` now answers DNS itself: DNS-over-HTTPS to 1.1.1.1 through the tunnel (the VPS no longer sees plaintext lookups), plus optional split DNS for home-network domains via `LAB_DOMAINS` / `LAB_DNS` in `credentials.env`
 - Camouflage target can be set at install time with `CAMOUFLAGE_DEST=... ./swizguard setup` (default stays `www.microsoft.com`)
 - Minimum sing-box version for mobile clients is now 1.12.3
 

@@ -96,6 +96,8 @@ CAMOUFLAGE_DEST="$CAMOUFLAGE_DEST" \
 REALITY_PUBLIC_KEY="$REALITY_PUBLIC_KEY" \
 SERVER_WG_PUBLIC_KEY="$SERVER_WG_PUBLIC_KEY" \
 SHORT_ID="$SHORT_ID" \
+LAB_DOMAINS="${LAB_DOMAINS:-}" \
+LAB_DNS="${LAB_DNS:-}" \
 bash "$SCRIPT_BASE_DIR/regen-client-configs.sh"
 
 ok "Xray client config generated (xray-client.json)"

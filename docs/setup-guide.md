@@ -404,6 +404,17 @@ sudo ./swizguard nuke
 
 Requires typing "NUKE" to confirm. Removes services, configs, keys, credentials, the wg1 interface, the Xray binary. Clean slate.
 
+## Home-network hostnames (split DNS)
+
+If you route into a home network and use hostnames that only your own DNS server knows (e.g. `jellyfin.home.example` on Pi-hole), public DNS can't resolve them. Add these lines to `/etc/swizguard/credentials.env`:
+
+```bash
+LAB_DOMAINS="home.example"        # space- or comma-separated; subdomains included
+LAB_DNS=192.168.0.53              # DNS server that answers for them (reachable through the tunnel)
+```
+
+Then run `sudo ./swizguard regen <client>` for each client and re-import the config. The generated `xray-client.json` sends lookups for those domains through the tunnel to `LAB_DNS`, and never falls back to public DNS for them. Every other name uses DNS-over-HTTPS to 1.1.1.1, also through the tunnel. On Android, turn off v2rayNG's bypass-LAN option, or Android will send your home subnet outside the VPN.
+
 ## Changing the camouflage target
 
 The default is `www.microsoft.com`. Xray specifically warns against `www.apple.com` and `www.icloud.com` because those have been flagged in some DPI systems — that's why I went with Microsoft as the default.
