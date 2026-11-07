@@ -87,6 +87,21 @@ sudo ./swizguard regen <client-name>
 
 Then redeploy. The new configs will have matching flow values.
 
+## Connected but no internet (WireGuard handshake never completes)
+
+Symptoms: the client connects and the REALITY layer works (client debug log shows `tunneling request to udp:127.0.0.1:51821 via <VPS>:443`), but the client keeps logging `Handshake did not complete after 5 seconds`, and `sudo tcpdump -ni lo udp port 51821` on the VPS shows nothing.
+
+Cause: Xray v26.10 and later block freedom-outbound connections to loopback and private addresses by default. With the server log level at `debug` you'll see `proxy/freedom: blocked target: udp:127.0.0.1:51821`. SwizGuard depends on exactly that hop (VLESS → local WireGuard), so every connection gets dropped.
+
+Fix (existing installs):
+
+```bash
+git pull
+sudo ./swizguard fix-loopback
+```
+
+This adds a `finalRules` entry that allows only UDP to `127.0.0.1:<WG port>`. Other loopback and private targets stay blocked. Client configs don't change, so no regen is needed. New installs already include the rule.
+
 ## sing-box and iPhone issues
 
 ### `legacy inbound fields are deprecated in sing-box 1.11.0 and removed in sing-box 1.13.0` (or `legacy DNS servers is deprecated`)

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- No traffic on servers running Xray v26.10+: Xray now blocks freedom-outbound connections to loopback by default, which dropped the VLESS → `127.0.0.1:51821` hop. Setup now adds a `finalRules` entry that allows only UDP to the local WireGuard port. Existing servers can apply it with the new `sudo ./swizguard fix-loopback`
 - `swizguard add` aborting silently on the first client: under `set -o pipefail`, the IP-allocation `grep` found no peers and killed the script (upstream PR #2)
 - sing-box client config rejected by sing-box 1.13+ (`legacy inbound fields ... removed in sing-box 1.13.0`): dropped the inbound `sniff` field, migrated DNS to the 1.12+ server format, made route actions explicit (upstream issue #3, PR #4). Validated with `sing-box check` on 1.12.12, 1.13.8, 1.13.11, 1.14.0 and 1.14.2
 - Friendly error messages in `setup`, `rekey` and `regen` were unreachable when their `grep` matched nothing — `pipefail` exited first
