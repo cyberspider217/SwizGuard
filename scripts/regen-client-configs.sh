@@ -134,22 +134,13 @@ cat > "$CLIENT_DIR/singbox-client.json" <<SBEOF
     "dns": {
         "servers": [
             {
+                "type": "https",
                 "tag": "dns-remote",
-                "address": "https://1.1.1.1/dns-query",
+                "server": "1.1.1.1",
                 "detour": "proxy"
-            },
-            {
-                "tag": "dns-direct",
-                "address": "1.1.1.1",
-                "detour": "direct"
             }
         ],
-        "rules": [
-            {
-                "outbound": "any",
-                "server": "dns-direct"
-            }
-        ],
+        "final": "dns-remote",
         "strategy": "prefer_ipv4"
     },
     "inbounds": [
@@ -160,7 +151,6 @@ cat > "$CLIENT_DIR/singbox-client.json" <<SBEOF
             "mtu": 9000,
             "auto_route": true,
             "stack": "system",
-            "sniff": true,
             "platform": {
                 "http_proxy": {
                     "enabled": false
@@ -228,10 +218,12 @@ cat > "$CLIENT_DIR/singbox-client.json" <<SBEOF
             },
             {
                 "ip_is_private": true,
+                "action": "route",
                 "outbound": "direct"
             },
             {
                 "inbound": "tun-in",
+                "action": "route",
                 "outbound": "wg-out"
             }
         ],
@@ -248,4 +240,4 @@ SCRIPT_BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 bash "$SCRIPT_BASE_DIR/_generate-launcher.sh"
 
 # Defensive: ensure private.key is always 600 even if previously loosened.
-[ -f "$CLIENT_DIR/private.key" ] && chmod 600 "$CLIENT_DIR/private.key"
+if [ -f "$CLIENT_DIR/private.key" ]; then chmod 600 "$CLIENT_DIR/private.key"; fi
