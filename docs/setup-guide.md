@@ -22,10 +22,10 @@ This guide assumes you've already got a VPS provisioned and you can SSH into it.
 ### iPhone
 - iOS 15 or later
 - **SFI (Sing-Box For iOS)** from the App Store
-- Heads up: sing-box 1.12.2 has a known DNS bug. 1.12.3+ or 1.13.x is fine. The App Store version of SFI usually ships a recent build, but if it gives you trouble the TestFlight build typically has the latest core.
+- Requires sing-box **1.12.3 or newer** (the generated config uses the 1.12+ DNS server format; 1.12.2 has a known DNS bug). Tested against 1.12, 1.13 and 1.14. The App Store version of SFI usually ships a recent build, but if it gives you trouble the TestFlight build typically has the latest core.
 
 ### Android
-- **SFA (Sing-Box For Android)** from Play Store, OR
+- **SFA (Sing-Box For Android)** from Play Store (sing-box 1.12.3 or newer), OR
 - **v2rayNG** from Play Store (which supports raw Xray JSON with chained outbounds)
 
 ## Step 1 — deploy the server
@@ -408,7 +408,15 @@ Requires typing "NUKE" to confirm. Removes services, configs, keys, credentials,
 
 The default is `www.microsoft.com`. Xray specifically warns against `www.apple.com` and `www.icloud.com` because those have been flagged in some DPI systems — that's why I went with Microsoft as the default.
 
-To change: edit `CAMOUFLAGE_DEST` in `scripts/setup-server.sh` BEFORE running setup, or manually edit `/usr/local/etc/xray/config.json` afterward and restart Xray. You'll also need to regen all clients so their `serverName` field matches the new target.
+To change it at install time, pass it as an environment variable:
+
+```bash
+sudo CAMOUFLAGE_DEST=www.example.com ./swizguard setup
+```
+
+To change it after setup, replace the hostname in `/usr/local/etc/xray/config.json` (both `dest` and `serverNames`) and in `CAMOUFLAGE_DEST=` in `/etc/swizguard/credentials.env`, restart Xray, then regen all clients so their `serverName` field matches the new target.
+
+Whatever you pick, re-run the camouflage check below with the new hostname — the probe response should come from that site, not Microsoft.
 
 Good alternatives I'd consider:
 - `www.cloudflare.com`

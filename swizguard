@@ -186,9 +186,9 @@ cmd_rekey() {
     local xray_keys
     xray_keys=$(/usr/local/bin/xray x25519)
     local new_priv
-    new_priv=$(echo "$xray_keys" | grep "^PrivateKey:" | awk '{print $2}')
+    new_priv=$(echo "$xray_keys" | grep "^PrivateKey:" | awk '{print $2}' || true)
     local new_pub
-    new_pub=$(echo "$xray_keys" | grep -E "^(Password|PublicKey)" | awk '{print $NF}')
+    new_pub=$(echo "$xray_keys" | grep -E "^(Password|PublicKey)" | awk '{print $NF}' || true)
 
     [ -z "$new_priv" ] && fail "Failed to parse new private key"
     [ -z "$new_pub" ] && fail "Failed to parse new public key"
@@ -255,7 +255,8 @@ cmd_regen() {
     peer_line=$(grep -A2 "^# $name$" /etc/wireguard/wg1.conf | grep AllowedIPs || true)
     [ -z "$peer_line" ] && fail "Could not find AllowedIPs for client '$name' in wg1.conf"
     local client_ipv4
-    client_ipv4=$(echo "$peer_line" | grep -oE '10\.7\.0\.[0-9]+')
+    client_ipv4=$(echo "$peer_line" | grep -oE '10\.7\.0\.[0-9]+' || true)
+    [ -z "$client_ipv4" ] && fail "Could not parse IPv4 for client '$name' from wg1.conf"
     local client_ipv6
     client_ipv6=$(echo "$peer_line" | grep -oE 'fd07::7[0-9]+' || echo "fd07::72")
 
