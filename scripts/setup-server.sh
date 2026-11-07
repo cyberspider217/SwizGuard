@@ -235,11 +235,25 @@ cat > "$XRAY_DIR/config.json" <<XEOF
     "outbounds": [
         {
             "protocol": "freedom",
-            "tag": "direct"
+            "tag": "direct",
+            "settings": {
+                "finalRules": [
+                    {
+                        "action": "allow",
+                        "network": "udp",
+                        "ip": ["127.0.0.1/32"],
+                        "port": "$WG_PORT"
+                    }
+                ]
+            }
         }
     ]
 }
 XEOF
+
+# Xray v26.10+ blocks freedom connections to loopback/private targets by
+# default. SwizGuard's whole design is VLESS -> 127.0.0.1:$WG_PORT, so the
+# finalRules above allow exactly that (UDP, loopback, WG port) and nothing else.
 
 ok "Xray configured — camouflaged as $CAMOUFLAGE_DEST"
 

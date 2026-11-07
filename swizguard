@@ -12,6 +12,7 @@
 #   ./swizguard remove <client-name>  # delete client + revoke access
 #   ./swizguard status                # server health + connected peers
 #   ./swizguard upgrade-vision        # enable xtls-rprx-vision on existing deployment
+#   ./swizguard fix-loopback          # let Xray v26.10+ forward to local WireGuard
 #   ./swizguard rekey                 # rotate REALITY keys (⚠ invalidates all clients)
 #   ./swizguard nuke                  # ☢ full uninstall — wipes everything
 #   ./swizguard help
@@ -234,6 +235,39 @@ cmd_upgrade_vision() {
     echo ""
 }
 
+cmd_fix_loopback() {
+    [ "$EUID" -ne 0 ] && fail "Run with sudo"
+    local cfg=/usr/local/etc/xray/config.json
+    [ ! -f "$cfg" ] && fail "Xray config not found at $cfg — run setup first"
+    source "$SWIZ_DIR/credentials.env"
+
+    info "Allowing Xray to forward to local WireGuard (127.0.0.1:${WG_PORT}/udp)..."
+    cp "$cfg" "$cfg.bak.$(date +%s)"
+    WG_PORT="$WG_PORT" python3 - "$cfg" <<'PY' || fail "Could not patch $cfg"
+import json, os, sys
+path = sys.argv[1]
+with open(path) as f:
+    cfg = json.load(f)
+rule = {"action": "allow", "network": "udp", "ip": ["127.0.0.1/32"], "port": os.environ["WG_PORT"]}
+found = False
+for ob in cfg.get("outbounds", []):
+    if ob.get("protocol") != "freedom":
+        continue
+    found = True
+    rules = ob.setdefault("settings", {}).setdefault("finalRules", [])
+    if rule not in rules:
+        rules.insert(0, rule)
+if not found:
+    sys.exit("no freedom outbound in config")
+with open(path, "w") as f:
+    json.dump(cfg, f, indent=4)
+    f.write("\n")
+PY
+    /usr/local/bin/xray run -test -config "$cfg" >/dev/null || fail "Patched config failed validation — backup kept next to $cfg"
+    systemctl restart xray
+    ok "Xray restarted. Clients reconnect on their own; no regen needed."
+}
+
 cmd_regen() {
     [ "$EUID" -ne 0 ] && fail "Run with sudo"
     [ $# -lt 1 ] && fail "Usage: ./swizguard regen <client-name>"
@@ -367,6 +401,7 @@ cmd_help() {
     ./swizguard remove <name>          Delete client and revoke access
     ./swizguard status                 Show server health
     ./swizguard upgrade-vision         Enable xtls-rprx-vision flow (⚠ breaks old clients)
+    ./swizguard fix-loopback           Fix "no internet" on Xray v26.10+ (allows Xray → local WireGuard)
     ./swizguard rekey                  Rotate REALITY keys (invalidates clients)
     ./swizguard nuke                   ☢ Full uninstall
     ./swizguard help                   Show this message
@@ -390,6 +425,7 @@ case "${1:-help}" in
     remove)          shift; cmd_remove "$@" ;;
     status)          shift; cmd_status "$@" ;;
     upgrade-vision)  shift; cmd_upgrade_vision "$@" ;;
+    fix-loopback)    shift; cmd_fix_loopback "$@" ;;
     rekey)           shift; cmd_rekey "$@" ;;
     nuke)            shift; cmd_nuke "$@" ;;
     help|-h|--help)  cmd_help ;;
