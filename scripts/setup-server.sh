@@ -50,8 +50,13 @@ XRAY_PORT=443
 WG_SUBNET="10.7.0"
 WG_SUBNET6="fd07::7"
 # Camouflage target — pick a major site that supports TLS 1.3 + H2
-# Avoid apple/icloud — Xray warns these may get your IP flagged
-CAMOUFLAGE_DEST="www.microsoft.com"
+# Avoid apple/icloud — Xray warns these may get your IP flagged.
+# Override without editing this file: sudo CAMOUFLAGE_DEST=www.example.com ./swizguard setup
+CAMOUFLAGE_DEST="${CAMOUFLAGE_DEST:-www.microsoft.com}"
+if ! [[ "$CAMOUFLAGE_DEST" =~ ^[A-Za-z0-9.-]+$ ]]; then
+    echo "CAMOUFLAGE_DEST must be a bare hostname (got: $CAMOUFLAGE_DEST)" >&2
+    exit 1
+fi
 # MTU reduced for tunnel-in-tunnel overhead
 WG_MTU=1280
 
@@ -153,7 +158,7 @@ ok "WireGuard configured on :$WG_PORT"
 
 info "Installing Xray-core..."
 
-XRAY_VERSION=$(curl -s "https://api.github.com/repos/XTLS/Xray-core/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)
+XRAY_VERSION=$(curl -s "https://api.github.com/repos/XTLS/Xray-core/releases/latest" | grep '"tag_name"' | cut -d'"' -f4 || true)
 [ -z "$XRAY_VERSION" ] && fail "Could not fetch Xray version"
 info "Xray version: $XRAY_VERSION"
 
@@ -172,9 +177,9 @@ ok "Xray-core installed at /usr/local/bin/xray"
 info "Generating REALITY x25519 keypair..."
 
 XRAY_KEYS=$(/usr/local/bin/xray x25519)
-REALITY_PRIVKEY=$(echo "$XRAY_KEYS" | grep "^PrivateKey:" | awk '{print $2}')
+REALITY_PRIVKEY=$(echo "$XRAY_KEYS" | grep "^PrivateKey:" | awk '{print $2}' || true)
 # Handle both old (PublicKey:) and new (Password (PublicKey):) output formats
-REALITY_PUBKEY=$(echo "$XRAY_KEYS" | grep -E "^(Password|PublicKey)" | awk '{print $NF}')
+REALITY_PUBKEY=$(echo "$XRAY_KEYS" | grep -E "^(Password|PublicKey)" | awk '{print $NF}' || true)
 
 [ -z "$REALITY_PRIVKEY" ] && fail "Failed to parse REALITY private key from xray x25519"
 [ -z "$REALITY_PUBKEY" ] && fail "Failed to parse REALITY public key from xray x25519"

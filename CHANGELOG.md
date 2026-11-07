@@ -5,6 +5,18 @@ All notable changes to SwizGuard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- `swizguard add` aborting silently on the first client: under `set -o pipefail`, the IP-allocation `grep` found no peers and killed the script (upstream PR #2)
+- sing-box client config rejected by sing-box 1.13+ (`legacy inbound fields ... removed in sing-box 1.13.0`): dropped the inbound `sniff` field, migrated DNS to the 1.12+ server format, made route actions explicit (upstream issue #3, PR #4). Validated with `sing-box check` on 1.12.12, 1.13.8, 1.13.11, 1.14.0 and 1.14.2
+- Friendly error messages in `setup`, `rekey` and `regen` were unreachable when their `grep` matched nothing — `pipefail` exited first
+- `regen-client-configs.sh` returning a failure status when `private.key` was absent
+
+### Changed
+- Camouflage target can be set at install time with `CAMOUFLAGE_DEST=... ./swizguard setup` (default stays `www.microsoft.com`)
+- Minimum sing-box version for mobile clients is now 1.12.3
+
 ## [1.0.0] — 2026-04-08
 
 First public release.
